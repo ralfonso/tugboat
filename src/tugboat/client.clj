@@ -24,4 +24,9 @@
     (let [backend-adapter @backend-adapter
           result-adapter @result-adapter
           task-id (.enqueue backend-adapter queue func args)]
-      (.set-result result-adapter task-id {:status :pending :task-id task-id}))))
+      (.set-result result-adapter task-id {:status :pending :task-id task-id})
+      task-id)))
+
+(defn get-result
+  [task-id]
+  (.get-result @result-adapter task-id))
