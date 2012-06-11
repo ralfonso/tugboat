@@ -21,17 +21,20 @@
   "initalize the workers and run their threads"
   ;; TODO need a way to gracefully shut down main thread and workers
   []
-  (let [backend-adapter (backend/create @config/conf)
+  (let [queue-adapter (backend/create @config/conf :queue)
+        result-adapter (backend/create @config/conf :result)
         queues (:queues @config/conf)
         worker-count (:workers @config/conf)
         workers (doall
-                  (repeatedly worker-count #(future (doall (worker/run-worker backend-adapter queues)))))]
+                  (repeatedly worker-count #(future (doall (worker/run-worker queue-adapter result-adapter queues)))))]
     (doseq [worker workers] @worker)))
 
 (defn -main
   []
-  (init {:backend {:type :redis :url "redis://localhost:6379"}
+  (init {:backends {:queue {:type :redis :url "redis://localhost:6379"}
+                    :result {:type :redis :url "redis://localhost:6379"}}
          :queues [:test :test2]
+         :result-timeout 600
          :task-namespaces ["tugboat.tasks.builtins"]
          :workers 10})
   (do-work))

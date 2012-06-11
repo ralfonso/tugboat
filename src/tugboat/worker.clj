@@ -1,5 +1,19 @@
 (ns tugboat.worker
-  (:use [clojure.data.json :only (read-json json-str)]))
+  (:use [clojure.data.json :only (read-json json-str)]
+        [clojure.tools.logging :only (debugf infof errorf)]
+        [tugboat.tasks.results :only (set-result)]))
+
+(defn run-task
+  [task-id callable args]
+  (let [resolved-func (resolve (symbol callable))]
+    (debugf "Running task: %s[%s]" callable task-id)
+    (try
+      (let [rv (apply resolved-func args)]
+        {:task-id task-id :value rv :status :success})
+    (catch Exception e 
+      (do 
+        (infof "Exception from task %s caught: %s" task-id e)
+        {:task-id task-id :status :failure})))))
 
 (defn run-worker
   "Runs within a worker thread. Needs to loop forever. Pulls an item from the
@@ -7,24 +21,29 @@
   ;; TODO needs better error handling
   ;; TOOD needs retrying
   ;; TODO needs a way to gracefully shut down
-  ([backend-adapter queues]
-    (run-worker backend-adapter queues false 5000))
+  ([queue-adapter result-adapter queues]
+    (run-worker queue-adapter result-adapter queues false 0))
 
-  ([backend-adapter queues blocking timeout]
+  ([queue-adapter result-adapter queues blocking timeout]
   (loop []
-    (let [task (.get-next backend-adapter queues)]
-      (println task)
+    (let [task (.get-next queue-adapter queues)]
+      (debugf "Received task: %s" task)
       (if-let [responded-queue (:queue task)]
         (if-let [payload (:payload task)]
           (let [parsed-payload (read-json payload)
                 task-id (:task-id parsed-payload)
                 callable (:callable parsed-payload)
                 args (:args parsed-payload)]
-            (try
-              (apply (resolve (symbol callable)) args)
-              (catch Exception e (println (format "Exception from task %s caught: %s" task-id e)))))
-          (println "no payload"))
-         (println "no queue")))
+            (.set-result result-adapter task-id {:status :started :task-id task-id})
+            (let [start-time (System/nanoTime)
+                  raw-result (run-task task-id callable args)
+                  end-time (System/nanoTime)
+                  elapsed-time (/ (- end-time start-time) 1e9)
+                  result (assoc raw-result :elapsed-time elapsed-time)]
+              (debugf "Task %s[%s] %s: %fs" callable task-id (name (:status result)) elapsed-time)
+              (.set-result result-adapter task-id result)))
+          (infof "Invalid task, no payload found: %s" task))
+         (infof "Queue not found: %s" task)))
     (if blocking
       (Thread/sleep timeout))
     (recur))))
