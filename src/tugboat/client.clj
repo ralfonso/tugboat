@@ -7,7 +7,7 @@
   [adapter-type]
   (if (empty? @config/conf)
     (throw (Exception. "You must configure Tugboat before queueing tasks")))
-  (backend/create @config/conf adapter-type))))
+  (backend/create @config/conf adapter-type))
 
 (def backend-adapter 
   (delay (get-adapter :queue)))
