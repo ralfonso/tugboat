@@ -1,37 +1,31 @@
 (ns tugboat.core
-  (:use [clojure.data.json :only (read-json json-str)])
   (:require [tugboat.config :as config]
-            [tugboat.backends.core :as backend]))
+            [tugboat.backends.core :as backend]
+            [tugboat.worker :as worker])
+  (:import (java.io FileNotFoundException)))
 
-(defn run-worker
-  [backend-adapter queues]
-  (loop []
-    (let [task (.get-next backend-adapter queues)]
-      (println task)
-      (if-let [responded-queue (:queue task)]
-        (if-let [payload (:payload task)]
-          (let [parsed-payload (read-json payload)
-                callable (:callable parsed-payload)
-                args (:args parsed-payload)]
-            (println (apply (resolve (symbol callable)) args)))
-          (println "no payload"))
-         (println "no queue")))
-    (recur)))
+(defn load-task-namespaces
+  "load the namespaces that contain our app's tasks"
+  [namespaces]
+  (doseq [task-ns namespaces]
+    (try
+      (require (symbol task-ns))
+      (catch FileNotFoundException e (throw (Exception. (format "Could not find task namespace %s" task-ns)))))))
 
 (defn init
   [configuration]
-  (config/configure configuration))
+  (config/configure configuration)
+  (load-task-namespaces (:task-namespaces @config/conf)))
 
 (defn do-work
+  "initalize the workers and run their threads"
+  ;; TODO need a way to gracefully shut down main thread and workers
   []
-  (doseq [task-ns (:task-namespaces @config/conf)]
-    (require (symbol task-ns)))
-
   (let [backend-adapter (backend/create @config/conf)
         queues (:queues @config/conf)
         worker-count (:workers @config/conf)
         workers (doall
-                  (repeatedly worker-count #(future (doall (run-worker backend-adapter queues)))))]
+                  (repeatedly worker-count #(future (doall (worker/run-worker backend-adapter queues)))))]
     (doseq [worker workers] @worker)))
 
 (defn -main
