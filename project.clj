@@ -1,4 +1,4 @@
-(defproject tugboat "0.0.2"
+(defproject tugboat "0.0.3"
   :description "distributed work queue"
   :url "http://github.com/ralfonso/tugboat"
   :license {:name "MIT License"
