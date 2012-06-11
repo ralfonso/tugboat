@@ -3,9 +3,18 @@
   (:require [tugboat.config :as config]
             [tugboat.backends.core :as backend]))
 
-(def backend-adapter (delay (do (backend/create @config/conf))))
+(def backend-adapter 
+  (delay 
+    (do 
+      (if (empty? @config/conf)
+        (throw (Exception. "You must configure Tugboat before queueing tasks")))
+      (backend/create @config/conf))))
 
 (defn enqueue
-  [queue func args]
-  (let [adapter @backend-adapter]
-    (.enqueue adapter queue func args)))
+  "Allow clients to push a task to the queue"
+  ([queue func] 
+    (enqueue queue func []))
+
+  ([queue func args]
+    (let [adapter @backend-adapter]
+      (.enqueue adapter queue func args))))
