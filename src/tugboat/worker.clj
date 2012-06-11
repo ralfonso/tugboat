@@ -8,11 +8,13 @@
   (let [resolved-func (resolve (symbol callable))]
     (debugf "Running task: %s[%s]" callable task-id)
     (try
+      (if (nil? resolved-func)
+        (throw (Exception. (str "Task not found: " callable))))
       (let [rv (apply resolved-func args)]
         {:task-id task-id :value rv :status :success})
     (catch Exception e 
       (do 
-        (infof "Exception from task %s caught: %s" task-id e)
+        (infof "Exception from task %s caught: (%s: %s)" task-id e (.getMessage e))
         {:task-id task-id :status :failure})))))
 
 (defn run-worker
