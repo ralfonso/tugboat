@@ -9,4 +9,6 @@
                  [log4j/log4j "1.2.16"]
                  [org.clojure/data.json "0.1.2"]
                  [clj-redis "0.0.12"]
+                 [clj-time "0.4.3"]
+                 [overtone/at-at "1.0.0"]
                  [com.eaio.uuid/uuid "3.2"]])

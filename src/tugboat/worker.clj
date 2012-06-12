@@ -24,9 +24,10 @@
   ;; TOOD needs retrying
   ;; TODO needs a way to gracefully shut down
   ([queue-adapter result-adapter queues]
-    (run-worker queue-adapter result-adapter queues false 0))
+    (run-worker queue-adapter result-adapter queues false 5000))
 
   ([queue-adapter result-adapter queues blocking timeout]
+  (infof "Worker thread started")
   (loop []
     (let [task (.get-next queue-adapter queues)]
       (debugf "Received task: %s" task)
@@ -36,6 +37,7 @@
                 task-id (:task-id parsed-payload)
                 callable (:callable parsed-payload)
                 args (:args parsed-payload)]
+            ;; change the status of the result to :started
             (.set-result result-adapter task-id {:status :started :task-id task-id})
             (let [start-time (System/nanoTime)
                   raw-result (run-task task-id callable args)
@@ -43,9 +45,10 @@
                   elapsed-time (/ (- end-time start-time) 1e9)
                   result (assoc raw-result :elapsed-time elapsed-time)]
               (debugf "Task %s[%s] %s: %fs" callable task-id (name (:status result)) elapsed-time)
+              ;; set the final result
               (.set-result result-adapter task-id result)))
           (infof "Invalid task, no payload found: %s" task))
          (infof "Queue not found: %s" task)))
-    (if blocking
+    (when blocking
       (Thread/sleep timeout))
     (recur))))
