@@ -42,8 +42,10 @@
   (set-result [this task-id result]
     (let [db (:redis-db this)
           redis-key (str result-prefix task-id)
-          result-timeout (or (:result-timeout (:config this)) 0)]
-      (redis/setex db redis-key result-timeout (base/encode-result result))))
+          result-timeout (:result-timeout (:config this))]
+      (if result-timeout
+        (redis/setex db redis-key result-timeout (base/encode-result result)))
+        (redis/set db redis-key (base/encode-result result)))))
 
   (get-result [this task-id]
     (let [db (:redis-db this)
