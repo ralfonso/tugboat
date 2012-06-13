@@ -5,17 +5,20 @@
 
 (defn run-task
   [task-id callable args]
-  (let [resolved-func (resolve (symbol callable))]
-    (debugf "Running task: %s[%s]" callable task-id)
-    (try
-      (if (nil? resolved-func)
-        (throw (Exception. (str "Task not found: " callable))))
-      (let [rv (apply resolved-func args)]
-        {:task-id task-id :value rv :status :success})
+  (try
+    (let [task-fn-symbol (symbol callable)
+          task-fn (resolve task-fn-symbol)]
+      (debugf "Running task: %s[%s]" callable task-id)
+        (if (nil? task-fn)
+          (throw (Exception. (str "Task not found: " callable)))
+          (if (not (fn? (deref task-fn)))
+            (throw (Exception. (str "Task is not a function: " callable)))))
+        (let [rv (apply task-fn args)]
+          {:task-id task-id :value rv :status :success}))
     (catch Exception e 
       (do 
         (infof "Exception from task %s caught: (%s: %s)" task-id e (.getMessage e))
-        {:task-id task-id :status :failure})))))
+        {:task-id task-id :status :failure}))))
 
 (defn get-work-unit-and-execute
   ;; TODO needs better error handling
