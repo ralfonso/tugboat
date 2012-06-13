@@ -43,7 +43,7 @@
                     :result {:type :redis :url "redis://localhost:6379"}}
          :queues [:test :test2]
          :result-timeout 600
-         :schedule [{:task "tugboat.tasks.test-task" :queue :test :schedule (secs 20)}]
+         :schedule [{:task "tugboat.tasks.builtins/sum" :queue :test :schedule (secs 20) :args [5 10]}]
          :task-namespaces ["tugboat.tasks.builtins"]
          :workers 10})
   (do-work))
