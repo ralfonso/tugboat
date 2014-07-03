@@ -53,6 +53,7 @@ For the library, you still have to configure the backends.  You can enqueue work
 ;; => {:status :pending :task-id "ab750610-b41d-11e1-9ab7-c42c033414ee"}
 ;; or, after completion:
 ;; => {:status :success :task-id "ab750610-b41d-11e1-9ab7-c42c033414ee" :value 15 :elapsed-time .000108}
+```
 
 ## License
 
